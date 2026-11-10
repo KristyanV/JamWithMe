@@ -12,6 +12,7 @@ export async function createRoom(hostName = "Host") {
   return { id: roomId, ...room, uid: user.uid };
 }
 export async function findRoomByCode(code) {
+  await ready;
   const codeSnap = await getDoc(doc(db, "roomCodes", code.toUpperCase()));
   if (!codeSnap.exists()) throw new Error("That room code is not available.");
   const roomSnap = await getDoc(doc(db, "rooms", codeSnap.data().roomId));
