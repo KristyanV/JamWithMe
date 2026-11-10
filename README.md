@@ -14,6 +14,8 @@ Serve this folder over HTTP (ES modules do not work from `file://`), for example
 
 The QR code uses the hosted QRCode.js library. Firebase configuration is intentionally a placeholder and must not contain Admin SDK credentials.
 
+The host song library provides metadata for 100 OPM love, barkada, and classic jam songs. It stores titles, artists, categories, suggested keys, and external search links, but does not scrape or store copyrighted lyrics, chords, or tabs. Add arrangements only when you wrote them, have permission to use them, or are using a verified public-domain source.
+
 ## GitHub Pages
 
 The app uses relative URLs and works from repository subpaths. Publish the repository root with GitHub Pages. Firebase must authorize `USERNAME.github.io` and the repository's deployment URL. Open `tv.html?room=ROOMCODE` on a Smart TV for the read-only synced display.
