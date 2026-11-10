@@ -5,10 +5,25 @@ import { renderLyrics } from "../components/lyricsDisplay.js";
 import { roomLink } from "../utils/roomCode.js";
 import { transposeText } from "../utils/chordTransposer.js";
 import { songLibrary } from "../data/songLibrary.js";
-const $ = selector => document.querySelector(selector); let room, queue = [], members = [], originalLyrics = "", transposeSteps = 0, unsubscribe = [];
+const $ = selector => document.querySelector(selector); let room, queue = [], members = [], originalLyrics = "", transposeSteps = 0, selectedSongIndex = null, unsubscribe = [];
 const toast = message => { const el = $("#toast"); el.textContent = message; el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 2400); };
 const librarySelect = $("#song-library");
-songLibrary.forEach((song, index) => librarySelect.append(new Option(`${song.title} · ${song.artist} · ${song.category}`, index)));
+const librarySearch = $("#song-library-search");
+function renderSongCatalog(filter = "") {
+  const query = filter.trim().toLocaleLowerCase();
+  librarySelect.replaceChildren();
+  songLibrary.forEach((song, index) => {
+    if (query && !song.title.toLocaleLowerCase().includes(query)) return;
+  const option = document.createElement("button");
+  option.type = "button";
+  option.className = "song-catalog-item";
+  option.dataset.index = index;
+  option.setAttribute("role", "option");
+  option.innerHTML = `<strong>${song.title}</strong><span>${song.artist} · ${song.category}</span>`;
+  librarySelect.append(option);
+  });
+}
+renderSongCatalog(););
 function showApp() { $("#host-setup").classList.add("hidden"); $("#host-app").classList.remove("hidden"); $("#connection-status").textContent = "Connected"; $("#room-code").textContent = room.roomCode; for (let i=0;i<=12;i++) $("#capo").append(new Option(`Fret ${i}`, i)); const invite = roomLink(room.roomCode); if (window.QRCode) new QRCode($("#qr-code"), { text: invite, width: 120, height: 120 }); unsubscribe.push(watchRoom(room.id, renderRoom, handleError), watchQueue(room.id, renderQueueState, handleError), watchMembers(room.id, renderMembers, handleError)); }
 function renderRoom(next) { if (!next) return; room = next; const song = room.currentSong; $("#current-title").textContent = song?.title || "No song selected"; $("#current-artist").textContent = song?.artist || "Choose a request or add a song below."; originalLyrics = song?.lyrics || ""; transposeSteps = 0; $("#key-display").textContent = `Key ${song?.originalKey || "—"}`; renderLyrics($("#lyrics"), song, { showChords: true }); if (song?.lyrics && transposeSteps) $("#lyrics").textContent = transposeText(originalLyrics, transposeSteps); $("#participant-chords").checked = !!room.participantChordDisplayEnabled; $("#participant-reorder").checked = room.participantReorderingEnabled !== false; }
 function renderQueueState(items) { queue = items; renderQueue($("#queue"), queue, { host: true, onSelect: item => selectNext(room.id, item).catch(handleError), onRemove: item => removeRequest(room.id, item).catch(handleError), onMove: (item, other) => moveRequest(room.id, item, other).catch(handleError) }); }
@@ -17,8 +32,9 @@ function handleError(error) { console.error(error); $("#connection-status").text
 $("#create-room").addEventListener("click", async () => { try { room = await createRoom(); showApp(); } catch (error) { handleError(error); } });
 $("#next-song").addEventListener("click", () => { const next = queue.find(item => item.status === "queued"); if (next) selectNext(room.id, next).catch(handleError); else toast("Add a song to the queue first."); });
 $("#add-song").addEventListener("click", () => $("#song-form").classList.toggle("hidden"));
-librarySelect.addEventListener("change", event => { const song = songLibrary[Number(event.target.value)]; if (!song) return; $("#song-title").value = song.title; $("#song-artist").value = song.artist; $("#song-chords").value = song.chords; $("#song-library-note").textContent = `${song.category} · ${song.difficulty} · Suggested key ${song.originalKey} · ${song.lyricStatus}.`; const source = $("#song-library-source"); source.href = song.sourceUrl; source.classList.remove("hidden"); });
-$("#song-form").addEventListener("submit", async event => { event.preventDefault(); try { const selected = librarySelect.value === "" ? null : songLibrary[Number(librarySelect.value)]; await addRequest(room.id, { title: $("#song-title").value.trim(), artist: $("#song-artist").value.trim(), chords: $("#song-chords").value.trim(), originalKey: selected?.originalKey || null, lyrics: $("#song-lyrics").value.trim() }, "Host"); event.target.reset(); $("#song-library-note").textContent = "Library entries include beginner-friendly metadata. Add only lyrics, chords, or tabs you are authorized to use."; $("#song-library-source").classList.add("hidden"); $("#song-form").classList.add("hidden"); } catch (error) { handleError(error); } });
+librarySelect.addEventListener("click", event => { const option = event.target.closest(".song-catalog-item"); if (!option) return; selectedSongIndex = Number(option.dataset.index); const song = songLibrary[selectedSongIndex]; if (!song) return; librarySelect.querySelectorAll(".song-catalog-item").forEach(item => item.classList.toggle("selected", item === option)); $("#song-title").value = song.title; $("#song-artist").value = song.artist; $("#song-chords").value = song.chords; $("#song-library-note").textContent = `${song.category} · ${song.difficulty} · Suggested key ${song.originalKey} · ${song.lyricStatus}.`; const source = $("#song-library-source"); source.href = song.sourceUrl; source.classList.remove("hidden"); });
+librarySearch.addEventListener("input", event => renderSongCatalog(event.target.value));
+$("#song-form").addEventListener("submit", async event => { event.preventDefault(); try { const selected = selectedSongIndex === null ? null : songLibrary[selectedSongIndex]; await addRequest(room.id, { title: $("#song-title").value.trim(), artist: $("#song-artist").value.trim(), chords: $("#song-chords").value.trim(), originalKey: selected?.originalKey || null, lyrics: $("#song-lyrics").value.trim() }, "Host"); event.target.reset(); selectedSongIndex = null; librarySelect.querySelectorAll(".song-catalog-item").forEach(item => item.classList.remove("selected")); $("#song-library-note").textContent = "Choose a song from the catalog, then add only lyrics, chords, or tabs you are authorized to use."; $("#song-library-source").classList.add("hidden"); $("#song-form").classList.add("hidden"); } catch (error) { handleError(error); } });
 $("#copy-invite").addEventListener("click", async () => { await navigator.clipboard.writeText(roomLink(room.roomCode)); toast("Invite link copied."); });
 $("#open-tv").addEventListener("click", () => window.open(`tv.html?room=${room.roomCode}`, "_blank", "noopener"));
 $("#end-room").addEventListener("click", async () => { if (confirm("End this jam session?")) { await updateRoom(room.id, { status: "ended" }); location.href = "index.html"; } });
