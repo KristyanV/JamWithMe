@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Host · Singing Jam</title><link rel="stylesheet" href="css/global.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+</head>
+<body data-page="host">
+  <header class="topbar"><a class="brand" href="index.html"><span>SJ</span> Singing Jam</a><div id="connection-status" class="status-pill">Connecting…</div></header>
+  <main class="app-shell">
+    <section id="host-setup" class="panel setup-panel"><p class="eyebrow">HOST SESSION</p><h1>Start a new jam.</h1><p class="muted">Invite friends with a room code and keep the music moving.</p><button id="create-room" class="button button-primary">Create jam session</button></section>
+    <section id="host-app" class="hidden">
+      <div class="room-bar panel"><div><p class="eyebrow">YOUR ROOM</p><strong id="room-code">—</strong><span id="member-count" class="muted">0 connected</span></div><div class="room-actions"><button id="copy-invite" class="button button-secondary">Copy invite</button><button id="open-tv" class="button button-secondary">Open TV</button><button id="end-room" class="button button-danger">End</button></div><div id="qr-code" class="qr"></div></div>
+      <div class="dashboard-grid">
+        <section class="panel current-panel"><div class="section-heading"><div><p class="eyebrow">NOW PLAYING</p><h2 id="current-title">No song selected</h2><p id="current-artist" class="muted">Choose a request or add a song below.</p></div><button id="next-song" class="button button-primary">Next song</button></div>
+          <div class="toolbar"><button id="guitar-mode" class="button button-secondary">Guitar mode</button><label>Font <input id="font-size" type="range" min="16" max="34" value="21"></label><label>Capo <select id="capo"></select></label><button id="transpose-down" class="icon-button" aria-label="Transpose down">−</button><span id="key-display">Key —</span><button id="transpose-up" class="icon-button" aria-label="Transpose up">+</button><button id="toggle-autoscroll" class="button button-secondary">Auto-scroll</button></div>
+          <div id="lyrics" class="lyrics empty-state">Your current arrangement will appear here.</div>
+        </section>
+        <aside class="panel queue-panel"><div class="section-heading"><div><p class="eyebrow">UP NEXT</p><h2>Song queue</h2></div><button id="add-song" class="icon-button" aria-label="Add song">+</button></div><div id="queue" class="queue-list"></div><form id="song-form" class="inline-form hidden"><input id="song-title" required placeholder="Song title"><input id="song-artist" placeholder="Artist"><input id="song-lyrics" placeholder="Lyrics (optional)"><button class="button button-primary">Add</button></form></aside>
+      </div>
+      <section class="panel settings-panel"><div><p class="eyebrow">ROOM SETTINGS</p><h2>Keep everyone in sync</h2></div><label class="switch-row"><input id="participant-chords" type="checkbox"> Show chords to participants</label><label class="switch-row"><input id="tv-chords" type="checkbox"> Show chords on TV</label><label class="switch-row"><input id="participant-reorder" type="checkbox" checked> Allow queue reordering</label><div><p class="eyebrow">PARTICIPANTS</p><div id="members" class="members"></div></div></section>
+    </section>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+  <script type="module" src="js/pages/host.js"></script>
+</body>
+</html>

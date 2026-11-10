@@ -1,0 +1,5 @@
+import { findRoomByCode, watchRoom } from "../services/roomService.js";
+import { renderLyrics } from "../components/lyricsDisplay.js";
+const $ = selector => document.querySelector(selector); const params = new URLSearchParams(location.search); if (params.get("room")) { $("#tv-code").value = params.get("room").toUpperCase(); connect(params.get("room")); }
+$("#tv-form").addEventListener("submit", event => { event.preventDefault(); connect($("#tv-code").value.trim()); });
+async function connect(code) { try { const room = await findRoomByCode(code); $("#tv-form").classList.add("hidden"); $("#tv-room").textContent = room.roomCode; watchRoom(room.id, next => { const song = next.currentSong; $("#tv-title").textContent = song?.title || "Waiting for the host"; $("#tv-artist").textContent = song?.artist || ""; renderLyrics($("#tv-lyrics"), song, { showChords: !!next.tvChordDisplayEnabled }); }, error => { $("#tv-lyrics").textContent = error.message; }); } catch (error) { $("#tv-lyrics").textContent = error.message; } }

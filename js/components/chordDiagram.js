@@ -1,0 +1,3 @@
+export function renderChordDiagram(container, chord, shape = { frets: ["x", 3, 2, 0, 1, 0] }) {
+  container.innerHTML = `<strong>${chord}</strong><svg viewBox="0 0 120 150" role="img" aria-label="${chord} chord diagram">${Array.from({ length: 6 }, (_, index) => `<line x1="${20 + index * 16}" y1="30" x2="${20 + index * 16}" y2="125" stroke="currentColor"/>`).join("")}${Array.from({ length: 6 }, (_, index) => `<line x1="20" y1="${30 + index * 19}" x2="100" y2="${30 + index * 19}" stroke="currentColor"/>`).join("")}${shape.frets.map((fret, index) => fret !== "x" && fret !== 0 ? `<circle cx="${20 + index * 16}" cy="${30 + Number(fret) * 19}" r="6" fill="currentColor"/>` : "").join("")}</svg>`;
+}

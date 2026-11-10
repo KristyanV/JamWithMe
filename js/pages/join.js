@@ -1,0 +1,4 @@
+import { findRoomByCode, joinRoom } from "../services/roomService.js";
+const form = document.querySelector("#join-form"), codeInput = document.querySelector("#room-code-input"), nameInput = document.querySelector("#display-name"), error = document.querySelector("#join-error");
+const params = new URLSearchParams(location.search); if (params.get("room")) codeInput.value = params.get("room").toUpperCase();
+form.addEventListener("submit", async event => { event.preventDefault(); error.textContent = ""; const code = codeInput.value.trim().toUpperCase(); try { const room = await findRoomByCode(code); await joinRoom(room, nameInput.value.trim()); sessionStorage.setItem("singingJamSession", JSON.stringify({ roomId: room.id, code, displayName: nameInput.value.trim() })); location.href = "participant.html"; } catch (reason) { error.textContent = reason.message || "Unable to join this room."; } });

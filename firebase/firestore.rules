@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function room(id) { return get(/databases/$(database)/documents/rooms/$(id)).data; }
+    function isHost(id) { return signedIn() && room(id).hostUid == request.auth.uid; }
+    function active(id) { return room(id).status == 'active' && room(id).expiresAt > request.time; }
+    function member(id) { return signedIn() && exists(/databases/$(database)/documents/rooms/$(id)/members/$(request.auth.uid)); }
+    match /roomCodes/{code} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.roomId is string && request.resource.data.expiresAt > request.time;
+      allow update, delete: if false;
+    }
+    match /rooms/{roomId} {
+      allow create: if signedIn() && request.resource.data.hostUid == request.auth.uid;
+      allow read: if signedIn() && active(roomId);
+      allow update: if isHost(roomId);
+      allow delete: if false;
+      match /members/{uid} {
+        allow read: if isHost(roomId) || member(roomId);
+        allow create: if signedIn() && active(roomId) && uid == request.auth.uid && (request.resource.data.role == 'participant' || (isHost(roomId) && request.resource.data.role == 'host'));
+        allow update: if isHost(roomId) || (uid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName']));
+        allow delete: if isHost(roomId) || uid == request.auth.uid;
+      }
+      match /queue/{requestId} {
+        allow read: if isHost(roomId) || member(roomId);
+        allow create: if member(roomId) && active(roomId) && request.resource.data.requestedBy == request.auth.uid;
+        allow update: if isHost(roomId);
+        allow delete: if isHost(roomId) || (member(roomId) && resource.data.requestedBy == request.auth.uid);
+      }
+    }
+  }
+}

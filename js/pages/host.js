@@ -1,0 +1,30 @@
+import { createRoom, watchRoom, watchMembers, updateRoom } from "../services/roomService.js";
+import { watchQueue, addRequest, removeRequest, moveRequest, selectNext } from "../services/queueService.js";
+import { renderQueue } from "../components/queueList.js";
+import { renderLyrics } from "../components/lyricsDisplay.js";
+import { roomLink } from "../utils/roomCode.js";
+import { transposeText } from "../utils/chordTransposer.js";
+const $ = selector => document.querySelector(selector); let room, queue = [], members = [], originalLyrics = "", transposeSteps = 0, unsubscribe = [];
+const toast = message => { const el = $("#toast"); el.textContent = message; el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 2400); };
+function showApp() { $("#host-setup").classList.add("hidden"); $("#host-app").classList.remove("hidden"); $("#connection-status").textContent = "Connected"; $("#room-code").textContent = room.roomCode; for (let i=0;i<=12;i++) $("#capo").append(new Option(`Fret ${i}`, i)); const invite = roomLink(room.roomCode); if (window.QRCode) new QRCode($("#qr-code"), { text: invite, width: 120, height: 120 }); unsubscribe.push(watchRoom(room.id, renderRoom, handleError), watchQueue(room.id, renderQueueState, handleError), watchMembers(room.id, renderMembers, handleError)); }
+function renderRoom(next) { if (!next) return; room = next; const song = room.currentSong; $("#current-title").textContent = song?.title || "No song selected"; $("#current-artist").textContent = song?.artist || "Choose a request or add a song below."; originalLyrics = song?.lyrics || ""; transposeSteps = 0; $("#key-display").textContent = `Key ${song?.originalKey || "—"}`; renderLyrics($("#lyrics"), song, { showChords: true }); if (song?.lyrics && transposeSteps) $("#lyrics").textContent = transposeText(originalLyrics, transposeSteps); $("#participant-chords").checked = !!room.participantChordDisplayEnabled; $("#participant-reorder").checked = room.participantReorderingEnabled !== false; }
+function renderQueueState(items) { queue = items; renderQueue($("#queue"), queue, { host: true, onSelect: item => selectNext(room.id, item).catch(handleError), onRemove: item => removeRequest(room.id, item).catch(handleError), onMove: (item, other) => moveRequest(room.id, item, other).catch(handleError) }); }
+function renderMembers(items) { members = items; $("#member-count").textContent = `${items.length} connected`; $("#members").innerHTML = items.map(member => `<span class="member-chip">${member.displayName || "Guest"}${member.role === "host" ? " · host" : ""}</span>`).join(""); }
+function handleError(error) { console.error(error); $("#connection-status").textContent = "Connection issue"; toast(error.message || "Something went wrong."); }
+$("#create-room").addEventListener("click", async () => { try { room = await createRoom(); showApp(); } catch (error) { handleError(error); } });
+$("#next-song").addEventListener("click", () => { const next = queue.find(item => item.status === "queued"); if (next) selectNext(room.id, next).catch(handleError); else toast("Add a song to the queue first."); });
+$("#add-song").addEventListener("click", () => $("#song-form").classList.toggle("hidden"));
+$("#song-form").addEventListener("submit", async event => { event.preventDefault(); try { await addRequest(room.id, { title: $("#song-title").value.trim(), artist: $("#song-artist").value.trim(), lyrics: $("#song-lyrics").value.trim() }, "Host"); event.target.reset(); $("#song-form").classList.add("hidden"); } catch (error) { handleError(error); } });
+$("#copy-invite").addEventListener("click", async () => { await navigator.clipboard.writeText(roomLink(room.roomCode)); toast("Invite link copied."); });
+$("#open-tv").addEventListener("click", () => window.open(`tv.html?room=${room.roomCode}`, "_blank", "noopener"));
+$("#end-room").addEventListener("click", async () => { if (confirm("End this jam session?")) { await updateRoom(room.id, { status: "ended" }); location.href = "index.html"; } });
+$("#participant-chords").addEventListener("change", event => updateRoom(room.id, { participantChordDisplayEnabled: event.target.checked }).catch(handleError));
+$("#tv-chords").addEventListener("change", event => updateRoom(room.id, { tvChordDisplayEnabled: event.target.checked }).catch(handleError));
+$("#participant-reorder").addEventListener("change", event => updateRoom(room.id, { participantReorderingEnabled: event.target.checked }).catch(handleError));
+$("#font-size").addEventListener("input", event => $("#lyrics").style.fontSize = `${event.target.value}px`);
+$("#guitar-mode").addEventListener("click", async event => { if (!document.fullscreenElement) { await document.documentElement.requestFullscreen?.(); event.target.textContent = "Exit guitar mode"; } else { await document.exitFullscreen?.(); event.target.textContent = "Guitar mode"; } });
+$("#capo").addEventListener("change", event => updateRoom(room.id, { capoPosition: Number(event.target.value) }).catch(handleError));
+$("#transpose-up").addEventListener("click", () => { transposeSteps++; $("#lyrics").textContent = transposeText(originalLyrics, transposeSteps); });
+$("#transpose-down").addEventListener("click", () => { transposeSteps--; $("#lyrics").textContent = transposeText(originalLyrics, transposeSteps); });
+$("#toggle-autoscroll").addEventListener("click", event => { const lyrics = $("#lyrics"); if (lyrics.dataset.scrolling) { clearInterval(Number(lyrics.dataset.scrolling)); delete lyrics.dataset.scrolling; event.target.textContent = "Auto-scroll"; } else { lyrics.dataset.scrolling = setInterval(() => lyrics.scrollBy({ top: 1, behavior: "smooth" }), 80); event.target.textContent = "Stop scroll"; } });
+window.addEventListener("beforeunload", () => unsubscribe.forEach(stop => stop?.()));
